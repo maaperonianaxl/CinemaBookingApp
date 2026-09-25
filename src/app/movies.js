@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { User } from 'lucide-react-native';
 
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, } from 'react-native';
@@ -181,7 +182,7 @@ const genres = [
           onPress={() => router.push('/profile')}
         >
           <Text style={styles.profileButtonText}>
-            PROFILE →
+            <User size={18} color="#FF4655" fill="#FF4655" />
           </Text>
         </Pressable>
       </View>
@@ -326,6 +327,7 @@ const styles = StyleSheet.create({
     color: '#FF4655',
     fontWeight: 'bold',
     fontSize: 12,
+    letterSpacing: 1,
   },
 
   searchInput: {

@@ -18,7 +18,7 @@ export default function Login() {
 };
 
   const login = () => {
-  if (email.trim() === '' || password === '') {
+  if (email.trim() === '' && password === '') {
     Alert.alert(
       'Error',
       'Please fill in all fields.'
