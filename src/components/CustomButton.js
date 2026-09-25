@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
-export default function CustomButton({ title, onPress,}) {
+
+export default function CustomButton({ title, onPress, children }) {
   return (
     
     <TouchableOpacity
@@ -10,6 +11,7 @@ export default function CustomButton({ title, onPress,}) {
       <Text style={styles.text}>
         {title}
       </Text>
+      {children}
     </TouchableOpacity>
   );
 }
