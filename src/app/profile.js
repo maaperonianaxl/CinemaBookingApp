@@ -1,13 +1,7 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  CalendarDays,
-  Clock3,
-  Film,
-  Ticket,
-  User,
-} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { CalendarDays, Clock3, Film, Ticket, User } from 'lucide-react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Profile() {
   const router = useRouter();
@@ -30,6 +24,23 @@ export default function Profile() {
       status: 'WATCHED',
     },
   ];
+
+  const logout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          onPress: () => router.replace('/'),
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,6 +121,17 @@ export default function Profile() {
         >
           BACK TO MOVIES
         </Text>
+
+        {/* Logout Button */}
+      <Pressable
+        style={styles.logoutButton}
+        onPress={logout}
+      >
+        <Text style={styles.logoutText}>
+          LOG OUT
+        </Text>
+      </Pressable>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -333,4 +355,24 @@ const styles = StyleSheet.create({
     padding: 14,
     marginTop: 12,
   },
+
+  logoutButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+  borderWidth: 1,
+  borderColor: '#FF4655',
+  borderRadius: 6,
+  padding: 14,
+  marginTop: 12,
+},
+
+logoutText: {
+  color: '#FF4655',
+  fontSize: 12,
+  fontWeight: 'bold',
+  letterSpacing: 1.5,
+},
+
 });
