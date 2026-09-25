@@ -12,6 +12,7 @@ export default function InputField({ label, placeholder, value, onChangeText, se
       <TextInput
         style={styles.input}
         placeholder={placeholder}
+        placeholderTextColor="#888888"
         value={value}
         onChangeText={onChangeText}
         secureTextEntry={secureTextEntry}
@@ -37,12 +38,12 @@ const styles = StyleSheet.create({
 
   input: {
     height: 50,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#1C1D21',
     borderWidth: 1,
     borderColor: '#3A3B40',
     borderRadius: 4,
     paddingHorizontal: 15,
     fontSize: 15,
-    color: '#000000',
+    color: '#ffffff',
   },
 });
