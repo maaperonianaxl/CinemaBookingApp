@@ -10,34 +10,59 @@ export default function Signup() {
 
   const router = useRouter(); //navigate between screens
 
+  const isValidEmail = (email) => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  return emailPattern.test(email);
+};
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const signup = () => { 
+  const signup = () => {
+  if (
+    name.trim() === '' ||
+    email.trim() === '' ||
+    password === ''
+  ) {
+    Alert.alert(
+      'Error',
+      'Please fill in all fields.'
+    );
+    return;
+  }
 
-    if (
-      name === '' ||
-      email === '' ||
-      password === ''
-    ) {
-      Alert.alert( 'Error', 'Please fill in all fields.'); // check if any field is empty
+  if (!isValidEmail(email.trim())) {
+    Alert.alert(
+      'Invalid Email',
+      'Please enter a valid email address.'
+    );
+    return;
+  }
 
-      return;
+  if (password.length < 8) {
+    Alert.alert(
+      'Weak Password',
+      'Password must be at least 8 characters.'
+    );
+    return;
+  }
 
-    }
-    // check if password and confirm password match 
-    if (password !== confirmPassword) {
-      Alert.alert( 'Error', 'Passwords do not match.' );
-      return;
-    }
+  if (password !== confirmPassword) {
+    Alert.alert(
+      'Password Mismatch',
+      'Password and Confirm Password do not match.'
+    );
+    return;
+  }
     
     // check logs if values are captured correctly
-    //console.log(name);
-    //console.log(email);
-    //console.log(password);
-    //console.log(confirmPassword);
+    console.log(name);
+    console.log(email);
+    console.log(password);
+    console.log(confirmPassword);
 
     Alert.alert('Success', 'Account created successfully WAAHOOOO!' );
 
@@ -92,7 +117,7 @@ export default function Signup() {
 
       <View style={styles.bottom}>
 
-        <Text>
+        <Text style={styles.text}>
           Already have an account?
         </Text>
 
@@ -101,10 +126,6 @@ export default function Signup() {
         >
           <Text style={styles.link}>
             {' '}Login
-          </Text>
-
-          <Text style={styles.link}>
-            {' '}Profile
           </Text>
         </Pressable>
 
@@ -117,26 +138,33 @@ export default function Signup() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#101113',
     justifyContent: 'center',
     padding: 25,
   },
 
   title: {
-    fontSize: 30,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '900',
     textAlign: 'center',
+    color: '#FF4655',
     marginBottom: 30,
+    letterSpacing: 3,
   },
 
   bottom: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 25,
   },
 
   link: {
-    color: 'blue',
+    color: '#FF4655',
     fontWeight: 'bold',
   },
+  
+  text: {
+    color: '#FFFFFF',
+  },
+   
 });

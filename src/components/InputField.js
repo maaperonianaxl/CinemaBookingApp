@@ -23,20 +23,26 @@ export default function InputField({ label, placeholder, value, onChangeText, se
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
 
   label: {
-    fontSize: 16,
-    marginBottom: 5,
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#FF4655',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   input: {
-    height: 45,
+    height: 50,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    fontSize: 16,
+    borderColor: '#3A3B40',
+    borderRadius: 4,
+    paddingHorizontal: 15,
+    fontSize: 15,
+    color: '#000000',
   },
 });

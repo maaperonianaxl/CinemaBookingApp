@@ -14,14 +14,15 @@ export default function RootLayout() {
       />
 
       <Stack.Screen
-        name="Home"
-        options={{ headerShown: false }} //hides the header for the signup screen
+        name="movies"
+        options={{ headerShown: false }}
       />
 
      <Stack.Screen
-        name="Profile"
+        name="profile"
         options={{ headerShown: false }} //hides the header for the signup screen
       />
+
     </Stack>
   );
 }

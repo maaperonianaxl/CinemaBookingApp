@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View, } from 'react-native';
 
 import { useRouter } from 'expo-router';
 
+import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
 
 export default function Login() {
@@ -10,20 +11,38 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const isValidEmail = (email) => { // Function to validate email format
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  return emailPattern.test(email);
+};
+
   const login = () => {
-    if (email !== '' && password !== '') {
-      Alert.alert( 'Hello User!', 'Login Successfully!' );
-    } else {
-      Alert.alert( 'Error', 'Please fill in all fields.' ); // check if any field is empty
-    }
-  };
+  if (email.trim() === '' || password === '') {
+    Alert.alert(
+      'Error',
+      'Please fill in all fields.'
+    );
+    return;
+  }
+
+  if (!isValidEmail(email.trim())) {
+    Alert.alert(
+      'Invalid Email',
+      'Please enter a valid email address.'
+    );
+    return;
+  }
+
+  router.push('/movies');
+};
 
   return (
     <View style={styles.container}>
 
-      <Text style={styles.title}> LOGIN </Text>
+      <Text style={styles.title}> Movie Masters </Text>
 
-      <Text style={styles.subtitle}> Please enter your email & password to login. </Text>
+      <Text style={styles.subtitle}> Welcome to Movie Masters! Browse and book movies easily. </Text>
 
       <InputField
         label="Email"
@@ -39,25 +58,17 @@ export default function Login() {
         onChangeText={setPassword}
         secureTextEntry={true}
       />
-      <BuCustomtton title="LOGIN" onPress={login}/>
+      <CustomButton title="LOGIN" onPress={login}/>
 
       <View style={styles.bottom}>
 
-        <Text> Don't have an account? </Text>
+        <Text style={styles.text}> Don't have an account? </Text>
 
-        <Pressable> 
+        <Pressable
           onPress={() => router.push('/signup')}
-        </Pressable>
-
-          <Text style={styles.link}>
-            {' '}Sign Up
-          </Text>
-          
-          <Pressable
-          onPress={() => router.push('/profile')}
         >
           <Text style={styles.link}>
-            {' '}Profile
+            {' '}Sign Up
           </Text>
         </Pressable>
 
@@ -70,35 +81,42 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#101113',
     justifyContent: 'center',
     padding: 25,
   },
 
   title: {
-    fontSize: 30,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 30,
+    color: '#FF4655',
+    marginBottom: 15,
+    letterSpacing: 3,
   },
 
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    marginBottom: 20,
-    color: 'gray',
-    fontFamily: 'Arial',
+    marginBottom: 35,
+    color: '#AAAAAA',
   },
 
   bottom: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 25,
   },
 
   link: {
-    color: 'blue',
+    color: '#FF4655',
     fontWeight: 'bold',
   },
+
+  text: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+
 });
 
