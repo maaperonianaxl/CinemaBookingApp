@@ -16,16 +16,18 @@ export default function CustomButton({ title, onPress,}) {
 
 const styles = StyleSheet.create({
   button: {
-    height: 45,
-    backgroundColor: '#333',
-    borderRadius: 8,
+    height: 52,
+    backgroundColor: '#FF4655',
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 10,
   },
 
   text: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    letterSpacing: 2,
   },
 });
