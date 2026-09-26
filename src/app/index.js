@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View, } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Alert, Animated, Pressable, StyleSheet, Text, View, } from 'react-native';
 
 import { useRouter } from 'expo-router';
 
@@ -36,10 +37,90 @@ export default function Login() {
 
   router.push('/movies');
 };
+const drift = useRef(new Animated.Value(0)).current;
+const pulse = useRef(new Animated.Value(0)).current;
+
+useEffect(() => {
+  const driftAnimation = Animated.loop(
+    Animated.sequence([
+      Animated.timing(drift, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(drift, {
+        toValue: 0,
+        duration: 5000,
+        useNativeDriver: true,
+      }),
+    ])
+  );
+
+  const pulseAnimation = Animated.loop(
+    Animated.sequence([
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 2500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulse, {
+        toValue: 0,
+        duration: 2500,
+        useNativeDriver: true,
+      }),
+    ])
+  );
+
+  driftAnimation.start();
+  pulseAnimation.start();
+
+  return () => {
+    driftAnimation.stop();
+    pulseAnimation.stop();
+  };
+}, [drift, pulse]);
+
+const driftY = drift.interpolate({
+  inputRange: [0, 1],
+  outputRange: [-18, 18],
+});
+
+const pulseOpacity = pulse.interpolate({
+  inputRange: [0, 1],
+  outputRange: [0.12, 0.3],
+});
+
+const pulseScale = pulse.interpolate({
+  inputRange: [0, 1],
+  outputRange: [1, 1.2],
+});
 
   return (
     <View style={styles.container}>
+      <Animated.View
+  pointerEvents="none"
+  style={[
+    styles.glow,
+    styles.glowTop,
+    {
+      opacity: pulseOpacity,
+      transform: [{ translateY: driftY }, { scale: pulseScale }],
+    },
+  ]}
+/>
 
+<Animated.View
+  pointerEvents="none"
+  style={[
+    styles.glow,
+    styles.glowBottom,
+    {
+      opacity: pulseOpacity,
+      transform: [{ translateY: Animated.multiply(driftY, -1) }],
+    },
+  ]}
+/>
+<View style={styles.content}>
       <Text style={styles.title}> Movie Masters </Text>
 
       <Text style={styles.subtitle}> Welcome to Movie Masters! Browse and book movies easily. </Text>
@@ -73,7 +154,7 @@ export default function Login() {
         </Pressable>
 
       </View>
-
+</View>
     </View>
   );
 }
@@ -84,6 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#101113',
     justifyContent: 'center',
     padding: 25,
+    overflow: 'hidden',
   },
 
   title: {
@@ -117,6 +199,29 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
+glow: {
+  position: 'absolute',
+  width: 280,
+  height: 280,
+  borderRadius: 140,
+  backgroundColor: '#FF4655',
+},
 
+glowTop: {
+  top: -120,
+  right: -100,
+},
+
+glowBottom: {
+  bottom: -150,
+  left: -120,
+  width: 330,
+  height: 330,
+  borderRadius: 165,
+},
+
+content: {
+  zIndex: 1,
+},
 });
 

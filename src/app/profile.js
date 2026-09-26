@@ -66,7 +66,7 @@ export default function Profile() {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Ticket size={22} color="#FF4655" />
-            <Text style={styles.statNumber}>8</Text>
+            <Text style={styles.statNumber}>4</Text>
             <Text style={styles.statLabel}>TICKETS</Text>
           </View>
 

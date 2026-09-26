@@ -2,15 +2,20 @@ import { Stack } from 'expo-router';
 
 export default function RootLayout() {
   return (
-    <Stack>
-      <Stack.Screen // define the screens in the stack navigator
+    <Stack initialRouteName="Get_started">
+      <Stack.Screen
+        name="Get_started"
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
         name="index"
-        options={{ headerShown: false }} //hides the header for the login screen
+        options={{ headerShown: false }}
       />
 
       <Stack.Screen
         name="signup"
-        options={{ headerShown: false }} //hides the header for the signup screen
+        options={{ headerShown: false }}
       />
 
       <Stack.Screen
@@ -18,9 +23,9 @@ export default function RootLayout() {
         options={{ headerShown: false }}
       />
 
-     <Stack.Screen
+      <Stack.Screen
         name="profile"
-        options={{ headerShown: false }} //hides the header for the signup screen
+        options={{ headerShown: false }}
       />
 
       <Stack.Screen
