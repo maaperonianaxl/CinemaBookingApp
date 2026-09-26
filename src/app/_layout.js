@@ -27,6 +27,12 @@ export default function RootLayout() {
         name="profile"
         options={{ headerShown: false }}
       />
+
+      <Stack.Screen
+        name="showtimes"
+        options={{ headerShown: false }} //hides the header for the signup screen
+      />
+
     </Stack>
   );
 }

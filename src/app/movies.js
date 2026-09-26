@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { User } from 'lucide-react-native';
 
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import MovieCard from '../components/MovieCard';
+import UpcomingMovieCard from '../components/UpcomingMovieCard';
 
 export default function Movies() {
   const router = useRouter();
@@ -128,18 +130,22 @@ const genres = [
 });
 
   // FIND: get the selected movie by its ID
-  const selectMovie = (movieId) => {
+    const selectMovie = (movieId) => {
     const selectedMovie = movies.find(
-      (movie) => movie.id === movieId
+        (movie) => movie.id === movieId
     );
 
     if (selectedMovie) {
-      Alert.alert(
-        'Movie Selected',
-        'You selected: ' + selectedMovie.title
-      );
+        router.push({
+        pathname: '/showtimes',
+        params: {
+            title: selectedMovie.title,
+            genre: selectedMovie.genre,
+            duration: selectedMovie.duration,
+        },
+        });
     }
-  };
+    };
 
   // Reusable movie card
   const renderMovie = (movie) => (
@@ -238,46 +244,37 @@ const genres = [
         NOW SHOWING
       </Text>
 
-      {filteredMovies.length > 0 ? (
-        filteredMovies.map((movie) => renderMovie(movie))
-      ) : (
-        <Text style={styles.emptyText}>
-          No movies found.
-        </Text>
-      )}
+      {filteredMovies.length > 0 ? ( 
+        filteredMovies.map((movie) => (
+        <MovieCard
+            key={movie.id}
+            movie={movie}
+            onPress={() => selectMovie(movie.id)} 
+        />
+  ))
+) : (
+  <Text style={styles.emptyText}>
+    No movies found.
+  </Text>
+)}
 
       {/* Upcoming Movies */}
       <Text style={styles.sectionTitle}>
         UPCOMING MOVIES
       </Text>
 
-      {upcomingMovies.map((movie) => (
-        <View
-          key={movie.id}
-          style={styles.upcomingCard}
+        <ScrollView
+            style={{ maxHeight: 300 }}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
         >
-          <View style={styles.upcomingInfo}>
-            <Text style={styles.movieTitle}>
-              {movie.title}
-            </Text>
-
-            <Text style={styles.details}>
-              Genre: {movie.genre}
-            </Text>
-
-            <Text style={styles.releaseDate}>
-              {movie.releaseDate}
-            </Text>
-          </View>
-
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonText}>
-              SOON
-            </Text>
-          </View>
-        </View>
-      ))}
-
+        {upcomingMovies.map((movie) => (
+            <UpcomingMovieCard
+            key={movie.id}
+            movie={movie}
+            />
+        ))}
+        </ScrollView>
     </ScrollView>
   );
 }
@@ -380,82 +377,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  movieCard: {
-    backgroundColor: '#1C1D21',
-    padding: 18,
-    borderRadius: 4,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF4655',
-    marginBottom: 15,
-  },
-
-  movieTitle: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-
-  details: {
-    color: '#AAAAAA',
-    fontSize: 13,
-    marginBottom: 5,
-  },
-
-  button: {
-    backgroundColor: '#FF4655',
-    padding: 13,
-    alignItems: 'center',
-    borderRadius: 4,
-    marginTop: 12,
-  },
-
-  buttonText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-
   emptyText: {
     color: '#AAAAAA',
     textAlign: 'center',
     padding: 20,
   },
 
-  upcomingCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#1C1D21',
-    padding: 16,
-    borderRadius: 4,
-    borderLeftWidth: 4,
-    borderLeftColor: '#555555',
-    marginBottom: 12,
-  },
-
-  upcomingInfo: {
-    flex: 1,
-  },
-
-  releaseDate: {
-    color: '#FF4655',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-
-  comingSoonBadge: {
-    backgroundColor: '#333333',
-    paddingVertical: 7,
-    paddingHorizontal: 9,
-    borderRadius: 3,
-    marginLeft: 8,
-  },
-
-  comingSoonText: {
-    color: '#FF4655',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
 });
