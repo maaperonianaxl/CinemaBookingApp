@@ -21,18 +21,21 @@ export default function Movies() {
       title: 'Spider-Man: Brand New Day',
       genre: 'Action / Adventure / Sci-Fi',
       duration: '2h 28m',
+      image: require('../../assets/images/spider-man.jpg'),
     },
     {
       id: '2',
       title: 'Resident Evil',
       genre: 'Action / Horror / Sci-Fi',
       duration: '2h 56m',
+      image: require('../../assets/images/resident-evil.jpg'),
     },
     {
       id: '3',
       title: 'Toy Story 5',
       genre: 'Animation / Comedy / Family / Adventure',
       duration: '1h 40m',
+      image: require('../../assets/images/toy-story-5.jpg'),
     },
     
     {
@@ -40,6 +43,7 @@ export default function Movies() {
       title: 'The End of Oak Street',
       genre: 'Mystery / Sci-Fi / Thriller',
       duration: '1h 39m',
+      image: require('../../assets/images/the-end-of-oak-street.jpg'),
     },
 
     {
@@ -47,6 +51,7 @@ export default function Movies() {
       title: 'Forgotten Island',
       genre: 'Animation / Adventure / Family / Fantasy / Comedy',
       duration: '1h 38m',
+      image: require('../../assets/images/forgotten-island.jpg'),
     },
 
     {
@@ -54,6 +59,7 @@ export default function Movies() {
       title: 'Backrooms',
       genre: 'Mystery / Sci-Fi / Thriller',
       duration: '3h 1m',
+      image: require('../../assets/images/backrooms.jpg'),
     },
 
   ];
@@ -151,8 +157,8 @@ const genres = [
   // Reusable movie card
   const renderMovie = (movie) => (
     <View key={movie.id} style={styles.movieCard}>
+      <Image source={movie.image} style={styles.movieImage} />
       <Text style={styles.movieTitle}>
-        <Text>Image</Text>
         {movie.title}
       </Text>
 

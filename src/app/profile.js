@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { CalendarDays, Clock3, Film, Ticket, User } from 'lucide-react-native';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SquareArrowRightExit } from 'lucide-react-native';
 
 export default function Profile() {
   const router = useRouter();
@@ -46,8 +47,8 @@ export default function Profile() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.logo}>CINEMA</Text>
-          <Text style={styles.headerLabel}>MY PROFILE</Text>
+          <Text style={{ ...styles.logo, justifyContent: 'center' }}>CINEMA</Text>
+          <SquareArrowRightExit size={24} color="#FF4655" onPress={() => router.push('/movies')} />
         </View>
 
         <View style={styles.profileCard}>
