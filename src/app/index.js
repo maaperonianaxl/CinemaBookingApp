@@ -8,11 +8,11 @@ import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
 
 export default function Login() {
-  const router = useRouter(); //navigate between screens
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const isValidEmail = (email) => { // Function to validate email format
+  const isValidEmail = (email) => {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   return emailPattern.test(email);

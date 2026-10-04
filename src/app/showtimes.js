@@ -1,5 +1,6 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeftToLine } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, } from 'react-native';
 import CustomButton from '../components/CustomButton';
@@ -36,7 +37,8 @@ export default function Showtimes() {
       [
         {
           text: 'OK',
-          onPress: () => {},
+          onPress: () => {router.push('/profile');
+          },
         },
       ]
     );
@@ -49,7 +51,8 @@ export default function Showtimes() {
     >
       {/* Header */}
       <Pressable onPress={() => router.back()}>
-        <Text style={styles.backButton}>‹ BACK TO MOVIES</Text>
+        <ArrowLeftToLine color="#FF4655" size={25} />
+        <Text></Text>
       </Pressable>
 
       <Text style={styles.heading}>SELECT SHOWTIME</Text>

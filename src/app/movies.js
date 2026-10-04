@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import MovieCard from '../components/MovieCard';
 import UpcomingMovieCard from '../components/UpcomingMovieCard';
+import CustomButton from '../components/CustomButton';
 
 export default function Movies() {
   const router = useRouter();
@@ -151,6 +152,7 @@ const genres = [
   const renderMovie = (movie) => (
     <View key={movie.id} style={styles.movieCard}>
       <Text style={styles.movieTitle}>
+        <Text>Image</Text>
         {movie.title}
       </Text>
 
@@ -162,14 +164,11 @@ const genres = [
         Duration: {movie.duration}
       </Text>
 
-      <Pressable
-        style={styles.button}
-        onPress={() => selectMovie(movie.id)}
-      >
-        <Text style={styles.buttonText}>
+      <CustomButton>
+        <Text>
           BOOK NOW
         </Text>
-      </Pressable>
+      </CustomButton>
     </View>
   );
 
