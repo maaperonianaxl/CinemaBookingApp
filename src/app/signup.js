@@ -58,13 +58,11 @@ export default function Signup() {
     return;
   }
 
-    Alert.alert('Success', 'Account created successfully' );
-
     setName('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
-    router.push('/');
+    router.push('/otp');
   };
 
   const drift = useRef(new Animated.Value(0)).current;
