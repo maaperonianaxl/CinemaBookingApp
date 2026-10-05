@@ -57,20 +57,12 @@ export default function Signup() {
     );
     return;
   }
-    
-    // check logs if values are captured correctly
-    console.log(name);
-    console.log(email);
-    console.log(password);
-    console.log(confirmPassword);
 
-    Alert.alert('Success', 'Account created successfully WAAHOOOO!' );
-
-    // Clear the fields
     setName('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    router.push('/otp');
   };
 
   const drift = useRef(new Animated.Value(0)).current;

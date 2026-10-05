@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import MovieCard from '../components/MovieCard';
 import UpcomingMovieCard from '../components/UpcomingMovieCard';
+import CustomButton from '../components/CustomButton';
 
 export default function Movies() {
   const router = useRouter();
@@ -20,18 +21,21 @@ export default function Movies() {
       title: 'Spider-Man: Brand New Day',
       genre: 'Action / Adventure / Sci-Fi',
       duration: '2h 28m',
+      image: require('../../assets/images/spider-man.jpg'),
     },
     {
       id: '2',
       title: 'Resident Evil',
       genre: 'Action / Horror / Sci-Fi',
       duration: '2h 56m',
+      image: require('../../assets/images/resident-evil.jpg'),
     },
     {
       id: '3',
       title: 'Toy Story 5',
       genre: 'Animation / Comedy / Family / Adventure',
       duration: '1h 40m',
+      image: require('../../assets/images/toy-story-5.jpg'),
     },
     
     {
@@ -39,6 +43,7 @@ export default function Movies() {
       title: 'The End of Oak Street',
       genre: 'Mystery / Sci-Fi / Thriller',
       duration: '1h 39m',
+      image: require('../../assets/images/the-end-of-oak-street.jpg'),
     },
 
     {
@@ -46,6 +51,7 @@ export default function Movies() {
       title: 'Forgotten Island',
       genre: 'Animation / Adventure / Family / Fantasy / Comedy',
       duration: '1h 38m',
+      image: require('../../assets/images/forgotten-island.jpg'),
     },
 
     {
@@ -53,6 +59,7 @@ export default function Movies() {
       title: 'Backrooms',
       genre: 'Mystery / Sci-Fi / Thriller',
       duration: '3h 1m',
+      image: require('../../assets/images/backrooms.jpg'),
     },
 
   ];
@@ -150,6 +157,7 @@ const genres = [
   // Reusable movie card
   const renderMovie = (movie) => (
     <View key={movie.id} style={styles.movieCard}>
+      <Image source={movie.image} style={styles.movieImage} />
       <Text style={styles.movieTitle}>
         {movie.title}
       </Text>
@@ -162,14 +170,11 @@ const genres = [
         Duration: {movie.duration}
       </Text>
 
-      <Pressable
-        style={styles.button}
-        onPress={() => selectMovie(movie.id)}
-      >
-        <Text style={styles.buttonText}>
+      <CustomButton>
+        <Text>
           BOOK NOW
         </Text>
-      </Pressable>
+      </CustomButton>
     </View>
   );
 

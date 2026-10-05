@@ -1,11 +1,13 @@
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import {router} from 'expo-router';
 
 
-export default function CustomButton({ title, onPress, children }) {
+export default function CustomButton({ title, color, onPress, children, }) {
   return (
     
     <TouchableOpacity
       style={styles.button}
+      color={color}
       onPress={onPress}
     >
       <Text style={styles.text}>
