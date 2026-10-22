@@ -16,5 +16,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "src/app/signup.js", "src/app/index.js", "src/components/CustomButton.js", "src/components/InputField.js", "src/app/_layout.js"  ]
+, "src/app/signup.jsx", "src/app/index.jsx", "src/components/CustomButton.jsx", "src/components/InputField.jsx", "src/app/_layout.jsx"  ]
 }
