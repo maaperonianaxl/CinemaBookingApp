@@ -52,7 +52,7 @@ export default function Otp() {
         <View>
             <CustomButton
             title= {"Verify"}
-            onPress={() => { router.push("/movies"), console.log('Verify pressed'); }}/>
+            onPress={() => { router.push("/movies") }}/>
             <Text style={{color: '#FFFFFF', textAlign: 'center', marginTop: 10}}>Didn't receive the code? <Text style={{color: '#FF4655'}}>Resend</Text></Text>
         </View>
 
