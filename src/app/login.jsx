@@ -4,21 +4,29 @@ import { useRouter } from 'expo-router';
 import AnimatedBackground from '../components/Animatedbackground';
 import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
+import { useAuth } from '../context/AuthContext';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export default function Login() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const login = () => {
+  const handleLogin = () => {
     if (email.trim() === '' || password === '') {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
     if (!isValidEmail(email.trim())) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    const result = login(email, password);
+    if (!result.ok) {
+      Alert.alert('Login Failed', result.error);
       return;
     }
     router.replace('/movies');
@@ -47,7 +55,7 @@ export default function Login() {
           secureTextEntry
         />
 
-        <CustomButton title="LOGIN" onPress={login} />
+        <CustomButton title="LOGIN" onPress={handleLogin} />
 
         <View style={styles.bottom}>
           <Text style={styles.text}>Don't have an account?</Text>
@@ -55,6 +63,8 @@ export default function Login() {
             <Text style={styles.link}> Sign Up</Text>
           </Pressable>
         </View>
+
+        <Text style={styles.demo}>Demo account: lyan@example.com / password123</Text>
       </View>
     </View>
   );
@@ -68,4 +78,5 @@ const styles = StyleSheet.create({
   bottom: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
   link: { color: '#FF4655', fontWeight: 'bold' },
   text: { color: '#FFFFFF', fontWeight: 'bold' },
+  demo: { color: '#888888', fontSize: 12, textAlign: 'center', marginTop: 20 },
 });

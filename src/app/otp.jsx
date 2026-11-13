@@ -1,14 +1,16 @@
-import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
+import { useAuth } from '../context/AuthContext';
 
 const DUMMY_CODE = '1234'; // demo only
 
 export default function Otp() {
   const router = useRouter();
+  const { completeSignup } = useAuth();
   const [digits, setDigits] = useState(['', '', '', '']);
   const inputs = useRef([]);
 
@@ -28,6 +30,13 @@ export default function Otp() {
   const verify = () => {
     if (digits.join('') !== DUMMY_CODE) {
       Alert.alert('Invalid Code', `Wrong code. For this demo, use ${DUMMY_CODE}.`);
+      return;
+    }
+
+    // Creates the account and saves the login session
+    if (!completeSignup()) {
+      Alert.alert('Error', 'Please sign up again.');
+      router.replace('/signup');
       return;
     }
     router.replace('/movies');

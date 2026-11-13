@@ -1,20 +1,22 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import AnimatedBackground from '../components/Animatedbackground';
 import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
+import { useAuth } from '../context/AuthContext';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export default function Signup() {
   const router = useRouter();
+  const { startSignup } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const signup = () => {
+  const handleSignup = () => {
     if (name.trim() === '' || email.trim() === '' || password === '') {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
@@ -29,6 +31,12 @@ export default function Signup() {
     }
     if (password !== confirmPassword) {
       Alert.alert('Password Mismatch', 'Password and Confirm Password do not match.');
+      return;
+    }
+
+    const result = startSignup({ name, email, password });
+    if (!result.ok) {
+      Alert.alert('Sign Up Failed', result.error);
       return;
     }
 
@@ -69,7 +77,7 @@ export default function Signup() {
           secureTextEntry
         />
 
-        <CustomButton title="SIGN UP" onPress={signup} />
+        <CustomButton title="SIGN UP" onPress={handleSignup} />
 
         <View style={styles.bottom}>
           <Text style={styles.text}>Already have an account?</Text>

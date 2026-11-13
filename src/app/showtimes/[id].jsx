@@ -1,19 +1,24 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Minus, Plus } from 'lucide-react-native';
 import CustomButton from '../../components/CustomButton';
+import { useAuth } from '../../context/AuthContext';
 import { movies } from '../../data/movies';
 import { dates, showtimes } from '../../data/showtimes';
+
+const MAX_TICKETS = 6;
 
 export default function Showtimes() {
   const router = useRouter();
   const { id } = useLocalSearchParams(); // dynamic segment from /showtimes/[id]
+  const { addBooking } = useAuth();
 
   const movie = movies.find((m) => m.id === id);
 
   const [selectedDate, setSelectedDate] = useState('Today');
   const [selectedTime, setSelectedTime] = useState('');
+  const [quantity, setQuantity] = useState(1);
 
   if (!movie) {
     return (
@@ -24,14 +29,23 @@ export default function Showtimes() {
     );
   }
 
-  const confirmShowtime = () => {
+  const confirmBooking = () => {
     if (selectedTime === '') {
       Alert.alert('Select a Showtime', 'Please choose a movie time first.');
       return;
     }
-    Alert.alert('Showtime Selected', `${movie.title}\n${selectedDate} at ${selectedTime}`, [
-      { text: 'OK', onPress: () => router.push('/profile') },
-    ]);
+
+    const result = addBooking({ movieId: movie.id, date: selectedDate, time: selectedTime, quantity });
+    if (!result.ok) {
+      Alert.alert('Booking Failed', result.error);
+      return;
+    }
+
+    Alert.alert(
+      'Booking Confirmed',
+      `${movie.title}\n${selectedDate} at ${selectedTime}\nSeats: ${result.booking.seats.join(', ')}`,
+      [{ text: 'VIEW TICKETS', onPress: () => router.replace('/profile') }]
+    );
   };
 
   return (
@@ -41,7 +55,7 @@ export default function Showtimes() {
       </Pressable>
 
       <Text style={styles.heading}>SELECT SHOWTIME</Text>
-      <Text style={styles.subtitle}>Choose your preferred date and time.</Text>
+      <Text style={styles.subtitle}>Choose your date, time and number of tickets.</Text>
 
       <View style={styles.movieCard}>
         <Image source={movie.image} style={styles.poster} resizeMode="cover" />
@@ -77,7 +91,22 @@ export default function Showtimes() {
         ))}
       </View>
 
-      <CustomButton title="CONTINUE" onPress={confirmShowtime} />
+      <Text style={styles.sectionTitle}>NUMBER OF TICKETS</Text>
+      <View style={styles.quantityRow}>
+        <Pressable style={styles.quantityButton} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
+          <Minus color="#FFFFFF" size={20} />
+        </Pressable>
+        <Text style={styles.quantityText}>{quantity}</Text>
+        <Pressable
+          style={styles.quantityButton}
+          onPress={() => setQuantity(Math.min(MAX_TICKETS, quantity + 1))}
+        >
+          <Plus color="#FFFFFF" size={20} />
+        </Pressable>
+      </View>
+      <Text style={styles.note}>Seats are assigned automatically.</Text>
+
+      <CustomButton title="CONFIRM BOOKING" onPress={confirmBooking} />
     </ScrollView>
   );
 }
@@ -106,6 +135,13 @@ const styles = StyleSheet.create({
   },
   selectedButton: { backgroundColor: '#FF4655', borderColor: '#FF4655' },
   buttonText: { color: '#FFFFFF', fontWeight: 'bold' },
+  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  quantityButton: {
+    width: 44, height: 44, borderRadius: 5, backgroundColor: '#1C1D21',
+    borderWidth: 1, borderColor: '#444444', alignItems: 'center', justifyContent: 'center',
+  },
+  quantityText: { color: '#FFFFFF', fontSize: 22, fontWeight: '900', minWidth: 30, textAlign: 'center' },
+  note: { color: '#888888', fontSize: 12, marginTop: 10 },
   notFound: { flex: 1, backgroundColor: '#101113', justifyContent: 'center', padding: 30 },
   notFoundText: { color: '#FFFFFF', fontSize: 18, textAlign: 'center' },
 });

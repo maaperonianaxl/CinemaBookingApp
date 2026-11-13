@@ -1,9 +1,10 @@
+import { useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import MovieCard from '../components/MovieCard';
 import UpcomingMovieCard from '../components/UpcomingMovieCard';
+import { useAuth } from '../context/AuthContext';
 import { movies } from '../data/movies';
 import { upcomingMovies } from '../data/upcomingmovies';
 
@@ -14,6 +15,7 @@ const capitalize = (text) => {
 
 export default function Movies() {
   const router = useRouter();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
 
@@ -45,7 +47,11 @@ export default function Movies() {
       <View style={styles.header}>
         <Text style={styles.logo}>CINEMA</Text>
         <Pressable style={styles.profileButton} onPress={() => router.push('/profile')}>
-          <User size={18} color="#FF4655" fill="#FF4655" />
+          {user?.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.profileImage} />
+          ) : (
+            <User size={18} color="#FF4655" fill="#FF4655" />
+          )}
         </Pressable>
       </View>
 
@@ -99,7 +105,11 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 35 },
   logo: { fontSize: 30, fontWeight: '900', color: '#FF4655', letterSpacing: 3 },
   tagline: { color: '#888888', fontSize: 11, letterSpacing: 2, marginTop: 8, marginBottom: 25 },
-  profileButton: { backgroundColor: '#1C1D21', borderWidth: 1, borderColor: '#FF4655', padding: 10, borderRadius: 4 },
+  profileButton: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#1C1D21', borderWidth: 1,
+    borderColor: '#FF4655', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  profileImage: { width: '100%', height: '100%' },
   searchInput: {
     backgroundColor: '#1C1D21', borderWidth: 1, borderColor: '#3A3B40', borderRadius: 4,
     padding: 14, color: '#FFFFFF', fontSize: 14, marginBottom: 25,

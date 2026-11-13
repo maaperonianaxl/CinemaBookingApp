@@ -1,10 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Film } from 'lucide-react-native';
 import AnimatedBackground from '../components/Animatedbackground';
+import { useAuth } from '../context/AuthContext';
 
 export default function GetStarted() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  // Saved session: skip welcome and login
+  if (user) return <Redirect href="/movies" />;
 
   return (
     <View style={styles.container}>
