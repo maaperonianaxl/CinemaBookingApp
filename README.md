@@ -1,97 +1,183 @@
-# Welcome to your Expo app 👋
+# Movie Masters
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A cinema booking mobile app built with **Expo (React Native)**, **Expo Router** and **Supabase**.
+Browse movies, read details, pick your own seats and manage your tickets. Accounts, bookings and seat
+availability live in a cloud database, so they are shared across devices.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Accounts:** sign up (with a demo OTP step), log in, log out, saved login session
+- **Movies:** now showing / upcoming lists, search, genre filters
+- **Movie details:** poster, synopsis, director, cast, release date, trailer link
+- **Showtimes:** choose a real date (next 7 days) and a showtime
+- **Seat picker:** an 8 x 8 seat grid, taken seats are disabled, up to 6 seats per booking
+- **No double booking:** the database refuses a seat that is already sold
+- **My bookings and tickets:** every booking has one ticket per seat with a ticket code
+- **Cancel booking:** cancel an upcoming booking and free its seats
+- **Profile:** profile photo (stored with the account), pull to refresh
+- **Settings:** edit name, change password (verifies the current one), Dark / Light / System theme
+- **Polish:** splash screen, loading spinners on every network action, friendly error messages
 
-   ```bash
-   npm install
-   ```
+## Tech stack
 
-2. Start the app
+| Area | Tool |
+|---|---|
+| App | Expo SDK 54, React Native, Expo Router (file-based routing) |
+| Backend | Supabase (Auth + Postgres + Row Level Security + SQL functions) |
+| Icons | lucide-react-native |
+| Local storage | AsyncStorage (login session, theme) |
+| Builds | EAS Build (Android APK) |
 
-   ```bash
-   npx expo start
-   ```
+## Screens and navigation
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+Welcome -> Login <-> Sign up -> OTP -> Movies
+Movies -> Movie details -> Showtimes -> Seat picker -> Profile
+Movies -> Profile -> Settings
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Signed-out screens (`index`, `login`, `signup`, `otp`) and signed-in screens are separated with
+Expo Router **protected routes** (`Stack.Protected`), so the app moves automatically after login or logout.
 
-### Other setup steps
+Dynamic routes (`[id]`): `movie/[id]`, `showtimes/[id]`, `seats/[id]`.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Getting started
 
-## Learn more
+### 1. Create the Supabase project
 
-To learn more about developing your project with Expo, look at the following resources:
+1. Create a free project at https://supabase.com
+2. Open **SQL Editor > New query**, paste the whole file `supabase/schema.sql` and click **Run**
+3. Open **Authentication > Sign In / Providers > Email** and turn **OFF** "Confirm email"
+   (the app has its own demo OTP step, so email confirmation is not needed)
+4. Open **Project Settings > API Keys** and copy:
+   - the **Project URL**
+   - the **Publishable key** (starts with `sb_publishable_`)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 2. Configure the app
 
-## Join the community
+Copy `.env.example` to `.env` and paste your two values:
 
-Join our community of developers creating universal apps.
+```
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxx
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The publishable key is designed to be public. Never put a **secret** key in the app.
 
+### 3. Install and run
 
+```
+npm install
+npx expo install @supabase/supabase-js react-native-url-polyfill @react-native-async-storage/async-storage expo-image-picker expo-splash-screen expo-status-bar react-native-svg react-native-safe-area-context
+npm install lucide-react-native
+npx expo start -c
+```
 
-# GitHub Desktop: Pull and Push Guide
+Create your own account with **Sign up** (demo OTP code: `1234`).
 
-This guide provides a simple, step-by-step process for pulling (downloading) and pushing (uploading) code using the GitHub Desktop application.
+## Build the Android APK
 
-## Prerequisites
-* GitHub Desktop installed and linked to your GitHub account.
-* A repository cloned to your local machine.
+Add the Supabase values to the `preview` profile in `eas.json` (EAS does not read your local `.env`):
 
----
+```json
+{
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://YOUR-PROJECT-REF.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_xxxxxxxx"
+      }
+    }
+  }
+}
+```
 
-## Part 1: How to Pull (Download Latest Changes)
-Before making any changes to your code, you should always "pull" to ensure you have the most up-to-date version of the repository from your team.
+Then run:
 
-1. **Open GitHub Desktop:** Launch the application on your computer.
-2. **Select Your Repository:** In the top-left corner, click the **Current repository** dropdown and select the project you want to work on.
-3. **Select Your Branch:** Next to it, click the **Current branch** dropdown and make sure you are on the correct branch.
-4. **Fetch Origin:** Click the **Fetch origin** button located in the top-right corner. This checks the remote server for any new changes without modifying your local files yet.
-5. **Pull Origin:** If there are new changes, the "Fetch origin" button will change to **Pull origin** (it will also show a number indicating how many commits you are behind). Click **Pull origin** to download and merge these changes into your local files.
+```
+npx expo-doctor
+eas build -p android --profile preview
+```
 
----
+## Project structure
 
-## Part 2: How to Push (Upload Your Changes)
-Once you have made your edits, saved your files, and are ready to share your work, you will "push" your changes to the remote repository.
+```
+assets/images/            posters and app icons
+supabase/schema.sql       database tables, security rules and functions
+src/
+  app/                    screens (Expo Router)
+    _layout.jsx           providers, splash screen, protected routes
+    index.jsx             welcome
+    login.jsx  signup.jsx  otp.jsx
+    movies.jsx            movie list, search, genre filter
+    movie/[id].jsx        movie details
+    showtimes/[id].jsx    date and time
+    seats/[id].jsx        seat picker
+    profile.jsx           profile, bookings, tickets, cancel
+    settings.jsx          edit profile, password, theme
+  components/             reusable UI (buttons, inputs, cards)
+  context/                AuthContext (Supabase), ThemeContext (dark/light)
+  data/                   movies, upcoming movies, showtimes and seat layout
+  lib/supabase.js         Supabase client
+  utils/dates.js          date helpers
+```
 
-1. **Review Your Changes:** Open GitHub Desktop. In the left panel, you will see a list of files you have modified, added, or deleted.
-2. **Select Files to Commit:** Ensure the checkboxes next to the files you want to upload are checked.
-3. **Write a Commit Message:** 
-   * At the bottom left, look for a small form with the placeholder text "Update [filename]" or "Summary (required)".
-   * Type a short, descriptive title for your changes (e.g., *Added new navigation bar*).
-   * (Optional) Add more details in the "Description" box below it.
-4. **Commit to Branch:** Click the blue button at the bottom that says **Commit to [branch name]**. This saves the changes locally to your Git history.
-5. **Push Origin:** Look at the top-right corner of the app. The button will now say **Push origin** and show an up arrow with a number (indicating how many commits you are ahead). Click **Push origin** to upload your changes to GitHub.
+## Database design
 
----
+| Table | Purpose |
+|---|---|
+| `profiles` | one row per user: name, email, avatar, member since (created by a trigger on sign up) |
+| `bookings` | one row per booking: user, movie, date, time, seats, status (`ACTIVE` / `CANCELLED`) |
+| `tickets` | one row per seat. `UNIQUE (movie_id, show_date, show_time, seat)` prevents double booking |
 
-### Pro Tips:
-* **Always Pull Before You Push:** This prevents merge conflicts and ensures your work builds smoothly on top of the latest code.
-* **Commit Often:** Make small, frequent commits with clear messages rather than one massive commit at the end of the week.
+- **Row Level Security:** a user can only read their own profile, bookings and tickets.
+- **`book_seats()`** creates the booking and all its tickets in one transaction (all or nothing).
+- **`cancel_booking()`** deletes the booking's tickets (freeing the seats) and marks it `CANCELLED`.
+- **`taken_seats()`** returns the taken seats of a showtime so every user sees the same seat map.
+
+The movie catalogue (`src/data/`) is kept as local dummy data with the poster images bundled in the app.
+
+## Requirements checklist
+
+| Requirement | Where |
+|---|---|
+| Expo Router setup | `src/app/_layout.jsx`, file-based routes, protected routes |
+| Dummy data folder and files | `src/data/movies.js`, `upcomingMovies.js`, `showtimes.js` |
+| Dynamic route `[id]` | `movie/[id]`, `showtimes/[id]`, `seats/[id]` |
+| Navigation between screens | `router.push`, `replace`, `back`, `dismissAll` |
+| Display of dynamic data | movie details, seat map, bookings and tickets from Supabase |
+
+## Screenshots
+
+Add your screenshots to `docs/screenshots/` using these names (see `docs/DEMO_SCRIPT.md` for the shot list):
+
+| File | Screen |
+|---|---|
+| `01-welcome.png` | Welcome |
+| `02-login.png` | Login |
+| `03-movies.png` | Movie list |
+| `04-details.png` | Movie details |
+| `05-showtimes.png` | Showtimes |
+| `06-seats.png` | Seat picker |
+| `07-profile.png` | Profile with bookings and tickets |
+| `08-settings.png` | Settings |
+| `09-light-theme.png` | Light theme |
+
+## Notes and limitations
+
+- The OTP step is a demo (`1234`), no real message is sent.
+- Profile photos are stored as small compressed images inside the `profiles` table. A larger app would use Supabase Storage.
+- Showtimes are the same for every movie and every day (dummy data). The seat map is per movie, date and time.
+- No payment step.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| "Missing Supabase settings" | Create `.env` (see `.env.example`) and restart with `npx expo start -c` |
+| "Email confirmation is still ON" | Turn off **Confirm email** in Supabase Authentication settings |
+| Works in Expo but not in the APK | Add the two `env` values to the `preview` profile in `eas.json` |
+| Login works but no data loads | Run `supabase/schema.sql` again and check for SQL errors |
+| "Unable to resolve ..." in the cloud build | File names are case-sensitive on the build server. Match the letter case exactly |

@@ -1,146 +1,193 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { users as seedUsers } from '../data/users';
-import { bookings as seedBookings } from '../data/bookings';
-import { tickets as seedTickets } from '../data/tickets';
+import { supabase } from '../app/lib/supabase';
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
-// Seats A1..H10 (auto-assigned in this order)
-const ALL_SEATS = 'ABCDEFGH'.split('').flatMap((row) =>
-  Array.from({ length: 10 }, (_, i) => `${row}${i + 1}`)
-);
+// ---- database rows -> app objects ----
+const toUser = (r) => ({ id: r.id, name: r.name, email: r.email, avatar: r.avatar, memberSince: r.member_since });
+const toBooking = (r) => ({ id: r.id, movieId: r.movie_id, date: r.show_date, time: r.show_time, seats: r.seats, status: r.status });
+const toTicket = (r) => ({ id: r.id, bookingId: r.booking_id, movieId: r.movie_id, seat: r.seat, code: r.code });
 
-const load = async (key, fallback) => {
-  try {
-    const raw = await AsyncStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
+// ---- readable error messages ----
+const friendly = (error) => {
+  const message = error?.message ?? '';
+  if (message.includes('Invalid login credentials')) return 'Incorrect email or password.';
+  if (message.includes('already registered')) return 'An account with this email already exists.';
+  if (message.includes('SEAT_TAKEN')) return 'One of those seats was just taken. Please choose other seats.';
+  if (message.includes('BOOKING_NOT_FOUND')) return 'This booking can no longer be cancelled.';
+  if (message.includes('Network request failed')) return 'No internet connection. Please try again.';
+  return message || 'Something went wrong. Please try again.';
 };
 
 export function AuthProvider({ children }) {
-  const [loaded, setLoaded] = useState(false);
-  const [users, setUsers] = useState(seedUsers);
-  const [bookings, setBookings] = useState(seedBookings);
-  const [tickets, setTickets] = useState(seedTickets);
+  const [loading, setLoading] = useState(true); // true while the saved session is restored
   const [user, setUser] = useState(null);
-  const [pendingUser, setPendingUser] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [pendingUser, setPendingUser] = useState(null); // signup waiting for the OTP step
 
-  // Restore saved data and session on app start
+  const clearData = () => {
+    setUser(null);
+    setBookings([]);
+    setTickets([]);
+  };
+
+  // Loads the profile, bookings and tickets of a signed-in user (RLS limits rows to their own)
+  const loadUserData = async (authId) => {
+    const [profile, b, t] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', authId).single(),
+      supabase.from('bookings').select('*').order('created_at', { ascending: false }),
+      supabase.from('tickets').select('*').order('created_at', { ascending: false }),
+    ]);
+    if (profile.error) throw profile.error;
+    if (b.error) throw b.error;
+    if (t.error) throw t.error;
+
+    setBookings(b.data.map(toBooking));
+    setTickets(t.data.map(toTicket));
+    setUser(toUser(profile.data)); // set last, so screens open with their data ready
+  };
+
+  // Restore the saved session when the app starts
   useEffect(() => {
-    (async () => {
-      const savedUsers = await load('users', seedUsers);
-      const savedBookings = await load('bookings', seedBookings);
-      const savedTickets = await load('tickets', seedTickets);
-      const sessionId = await load('session', null);
+    let active = true;
 
-      setUsers(savedUsers);
-      setBookings(savedBookings);
-      setTickets(savedTickets);
-      setUser(savedUsers.find((u) => u.id === sessionId) ?? null);
-      setLoaded(true);
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) await loadUserData(data.session.user.id);
+      } catch (e) {
+        await supabase.auth.signOut().catch(() => {});
+        clearData();
+      }
+      if (active) setLoading(false);
     })();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') clearData();
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  // Save changes
-  useEffect(() => {
-    if (loaded) AsyncStorage.setItem('users', JSON.stringify(users));
-  }, [users, loaded]);
-
-  useEffect(() => {
-    if (loaded) AsyncStorage.setItem('bookings', JSON.stringify(bookings));
-  }, [bookings, loaded]);
-
-  useEffect(() => {
-    if (loaded) AsyncStorage.setItem('tickets', JSON.stringify(tickets));
-  }, [tickets, loaded]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    if (user) AsyncStorage.setItem('session', JSON.stringify(user.id));
-    else AsyncStorage.removeItem('session');
-  }, [user, loaded]);
-
-  const login = (email, password) => {
-    const found = users.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-    );
-    if (!found) return { ok: false, error: 'Incorrect email or password.' };
-    setUser(found);
-    return { ok: true };
+  // ---------- Authentication ----------
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) return { ok: false, error: friendly(error) };
+    try {
+      await loadUserData(data.user.id);
+      return { ok: true };
+    } catch (e) {
+      await supabase.auth.signOut().catch(() => {});
+      return { ok: false, error: friendly(e) };
+    }
   };
 
-  const logout = () => setUser(null);
+  const logout = async () => {
+    await supabase.auth.signOut().catch(() => {});
+    clearData();
+  };
 
-  // Step 1 of signup (before OTP)
+  // Step 1: keep the form data until the OTP step is done
   const startSignup = ({ name, email, password }) => {
-    const exists = users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (exists) return { ok: false, error: 'An account with this email already exists.' };
     setPendingUser({ name: name.trim(), email: email.trim(), password });
-    return { ok: true };
   };
 
-  // Step 2 of signup (after OTP is verified)
-  const completeSignup = () => {
-    if (!pendingUser) return false;
-    const newUser = {
-      id: `u${Date.now()}`,
-      ...pendingUser,
-      memberSince: String(new Date().getFullYear()),
-    };
-    setUsers((prev) => [...prev, newUser]);
-    setUser(newUser);
-    setPendingUser(null);
-    return true;
-  };
+  // Step 2: create the account (a database trigger creates the profile)
+  const completeSignup = async () => {
+    if (!pendingUser) return { ok: false, error: 'Please sign up again.' };
 
-  // Creates a booking and its tickets with auto-assigned seats
-  const addBooking = ({ movieId, date, time, quantity }) => {
-    const taken = bookings
-      .filter((b) => b.movieId === movieId && b.date === date && b.time === time)
-      .flatMap((b) => b.seats);
-    const free = ALL_SEATS.filter((seat) => !taken.includes(seat));
-
-    if (free.length < quantity) {
-      return { ok: false, error: 'Not enough seats left for this showtime.' };
+    const { data, error } = await supabase.auth.signUp({
+      email: pendingUser.email,
+      password: pendingUser.password,
+      options: { data: { name: pendingUser.name } },
+    });
+    if (error) return { ok: false, error: friendly(error) };
+    if (!data.session) {
+      return { ok: false, error: 'Email confirmation is still ON in Supabase. Turn it off (see README) and try again.' };
     }
 
-    const seats = free.slice(0, quantity);
-    const id = `b${Date.now()}`;
-    const booking = { id, userId: user.id, movieId, date, time, seats, status: 'UPCOMING' };
-    const newTickets = seats.map((seat) => ({
-      id: `${id}-${seat}`,
-      bookingId: id,
-      userId: user.id,
-      movieId,
-      seat,
-      code: `MM${id.slice(-5)}${seat}`,
-    }));
-
-    setBookings((prev) => [booking, ...prev]);
-    setTickets((prev) => [...newTickets, ...prev]);
-    return { ok: true, booking };
+    try {
+      await loadUserData(data.user.id);
+      setPendingUser(null);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: friendly(e) };
+    }
   };
 
-  // Updates the current user (e.g. profile photo) and saves it
-  const updateUser = (changes) => {
-    const updated = { ...user, ...changes };
-    setUser(updated);
-    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+  // ---------- Profile ----------
+  // changes: { name } and/or { avatar }
+  const updateProfile = async (changes) => {
+    const { data, error } = await supabase.from('profiles').update(changes).eq('id', user.id).select().single();
+    if (error) return { ok: false, error: friendly(error) };
+    setUser(toUser(data));
+    return { ok: true };
   };
 
-  const myBookings = user ? bookings.filter((b) => b.userId === user.id) : [];
-  const myTickets = user ? tickets.filter((t) => t.userId === user.id) : [];
+  const changePassword = async (currentPassword, newPassword) => {
+    // Check the current password first
+    const check = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+    if (check.error) return { ok: false, error: 'Your current password is incorrect.' };
 
-  // Wait until saved data is loaded so screens never flash the wrong state
-  if (!loaded) return null;
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { ok: false, error: friendly(error) };
+    return { ok: true };
+  };
+
+  // Reload everything (pull to refresh) - useful when another device made changes
+  const refresh = async () => {
+    try {
+      await loadUserData(user.id);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: friendly(e) };
+    }
+  };
+
+  // ---------- Seats and bookings ----------
+  const getTakenSeats = async (movieId, date, time) => {
+    const { data, error } = await supabase.rpc('taken_seats', { p_movie: movieId, p_date: date, p_time: time });
+    if (error) return { ok: false, error: friendly(error) };
+    return { ok: true, seats: data.map((row) => row.seat) };
+  };
+
+  const bookSeats = async ({ movieId, date, time, seats }) => {
+    const { error } = await supabase.rpc('book_seats', { p_movie: movieId, p_date: date, p_time: time, p_seats: seats });
+    if (error) return { ok: false, error: friendly(error), seatTaken: (error.message ?? '').includes('SEAT_TAKEN') };
+    await refresh();
+    return { ok: true };
+  };
+
+  const cancelBooking = async (bookingId) => {
+    const { error } = await supabase.rpc('cancel_booking', { p_booking: bookingId });
+    if (error) return { ok: false, error: friendly(error) };
+    await refresh();
+    return { ok: true };
+  };
 
   return (
     <AuthContext.Provider
-      value={{ user, myBookings, myTickets, login, logout, startSignup, completeSignup, addBooking, updateUser }}
+      value={{
+        user,
+        loading,
+        myBookings: bookings,
+        myTickets: tickets,
+        login,
+        logout,
+        startSignup,
+        completeSignup,
+        updateProfile,
+        changePassword,
+        refresh,
+        getTakenSeats,
+        bookSeats,
+        cancelBooking,
+      }}
     >
       {children}
     </AuthContext.Provider>
