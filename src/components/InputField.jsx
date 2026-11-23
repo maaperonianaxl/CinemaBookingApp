@@ -1,18 +1,29 @@
 import { forwardRef } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-const InputField = forwardRef(function InputField(
-  { label, style, containerStyle, ...props },
-  ref
-) {
+const InputField = forwardRef(function InputField({ label, style, containerStyle, ...props }, ref) {
+  const { colors } = useTheme();
+
   return (
-    <View style={[styles.wrapper, containerStyle]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+    <View style={[{ marginBottom: 16 }, containerStyle]}>
+      {label ? <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 6 }}>{label}</Text> : null}
       <TextInput
         ref={ref}
-        style={[styles.input, style]}
-        placeholderTextColor="#888888"
+        placeholderTextColor={colors.textDim}
         autoCapitalize="none"
+        style={[
+          {
+            backgroundColor: colors.card,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 4,
+            padding: 14,
+            color: colors.text,
+            fontSize: 14,
+          },
+          style,
+        ]}
         {...props}
       />
     </View>
@@ -20,17 +31,3 @@ const InputField = forwardRef(function InputField(
 });
 
 export default InputField;
-
-const styles = StyleSheet.create({
-  wrapper: { marginBottom: 16 },
-  label: { color: '#FFFFFF', fontWeight: 'bold', marginBottom: 6 },
-  input: {
-    backgroundColor: '#1C1D21',
-    borderWidth: 1,
-    borderColor: '#3A3B40',
-    borderRadius: 4,
-    padding: 14,
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-});

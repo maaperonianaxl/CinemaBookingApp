@@ -1,15 +1,22 @@
-import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const DUMMY_CODE = '1234'; // demo only
 
 export default function Otp() {
   const router = useRouter();
+  const { completeSignup } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const [digits, setDigits] = useState(['', '', '', '']);
+  const [loading, setLoading] = useState(false);
   const inputs = useRef([]);
 
   const handleChange = (text, index) => {
@@ -25,12 +32,21 @@ export default function Otp() {
     }
   };
 
-  const verify = () => {
+  const verify = async () => {
     if (digits.join('') !== DUMMY_CODE) {
       Alert.alert('Invalid Code', `Wrong code. For this demo, use ${DUMMY_CODE}.`);
       return;
     }
-    router.replace('/movies');
+
+    setLoading(true);
+    const result = await completeSignup();
+    setLoading(false);
+
+    // On success the app moves to Movies automatically (protected routes)
+    if (!result.ok) {
+      Alert.alert('Sign Up Failed', result.error);
+      router.replace('/signup');
+    }
   };
 
   return (
@@ -55,7 +71,7 @@ export default function Otp() {
         ))}
       </View>
 
-      <CustomButton title="VERIFY" onPress={verify} />
+      <CustomButton title="VERIFY" onPress={verify} loading={loading} />
       <Text style={styles.resend}>
         Didn't receive the code? <Text style={styles.resendLink}>Resend</Text>
       </Text>
@@ -63,12 +79,13 @@ export default function Otp() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#101113', justifyContent: 'center', padding: 30 },
-  title: { fontSize: 28, fontWeight: '900', textAlign: 'center', color: '#FF4655', letterSpacing: 2 },
-  hint: { color: '#AAAAAA', textAlign: 'center', marginTop: 10, marginBottom: 30 },
-  otpRow: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
-  otpInput: { width: 56, height: 60, fontSize: 22, fontWeight: 'bold', padding: 0 },
-  resend: { color: '#FFFFFF', textAlign: 'center', marginTop: 16 },
-  resendLink: { color: '#FF4655', fontWeight: 'bold' },
-});
+const makeStyles = (c) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg, justifyContent: 'center', padding: 30 },
+    title: { fontSize: 28, fontWeight: '900', textAlign: 'center', color: c.accent, letterSpacing: 2 },
+    hint: { color: c.textMuted, textAlign: 'center', marginTop: 10, marginBottom: 30 },
+    otpRow: { flexDirection: 'row', justifyContent: 'center', gap: 14 },
+    otpInput: { width: 56, height: 60, fontSize: 22, fontWeight: 'bold', padding: 0 },
+    resend: { color: c.text, textAlign: 'center', marginTop: 16 },
+    resendLink: { color: c.accent, fontWeight: 'bold' },
+  });
