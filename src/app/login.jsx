@@ -1,5 +1,7 @@
+
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import AnimatedBackground from '../components/AnimatedBackground';
 import CustomButton from '../components/CustomButton';
@@ -17,6 +19,7 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -24,6 +27,7 @@ export default function Login() {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
+
     if (!isValidEmail(email.trim())) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
@@ -33,7 +37,6 @@ export default function Login() {
     const result = await login(email, password);
     setLoading(false);
 
-    // On success the app moves to Movies automatically (protected routes)
     if (!result.ok) Alert.alert('Login Failed', result.error);
   };
 
@@ -43,12 +46,45 @@ export default function Login() {
 
       <View style={styles.content}>
         <Text style={styles.title}>Movie Masters</Text>
-        <Text style={styles.subtitle}>Welcome to Movie Masters! Browse and book movies easily.</Text>
+        <Text style={styles.subtitle}>
+          Welcome to Movie Masters! Browse and book movies easily.
+        </Text>
 
-        <InputField label="Email" placeholder="Enter your email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <InputField label="Password" placeholder="Enter your password" value={password} onChangeText={setPassword} secureTextEntry />
+        <InputField
+          label="Email"
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+        />
 
-        <CustomButton title="LOGIN" onPress={handleLogin} loading={loading} />
+        <InputField
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          rightAccessory={
+            <Pressable
+              onPress={() => setShowPassword((previous) => !previous)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? (
+                <EyeOff size={20} color={colors.textMuted} />
+              ) : (
+                <Eye size={20} color={colors.textMuted} />
+              )}
+            </Pressable>
+          }
+        />
+
+        <CustomButton
+          title="LOGIN"
+          onPress={handleLogin}
+          loading={loading}
+        />
 
         <View style={styles.bottom}>
           <Text style={styles.text}>Don't have an account?</Text>
@@ -63,11 +99,33 @@ export default function Login() {
 
 const makeStyles = (c) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg, justifyContent: 'center', padding: 25, overflow: 'hidden' },
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+      justifyContent: 'center',
+      padding: 25,
+      overflow: 'hidden',
+    },
     content: { zIndex: 1 },
-    title: { fontSize: 36, fontWeight: '900', textAlign: 'center', color: c.accent, marginBottom: 15, letterSpacing: 3 },
-    subtitle: { fontSize: 14, textAlign: 'center', marginBottom: 35, color: c.textMuted },
-    bottom: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
+    title: {
+      fontSize: 36,
+      fontWeight: '900',
+      textAlign: 'center',
+      color: c.accent,
+      marginBottom: 15,
+      letterSpacing: 3,
+    },
+    subtitle: {
+      fontSize: 14,
+      textAlign: 'center',
+      marginBottom: 35,
+      color: c.textMuted,
+    },
+    bottom: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 25,
+    },
     link: { color: c.accent, fontWeight: 'bold' },
     text: { color: c.text, fontWeight: 'bold' },
   });
