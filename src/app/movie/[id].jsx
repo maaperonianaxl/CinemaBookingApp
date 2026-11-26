@@ -1,33 +1,134 @@
-import { useMemo } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator, Alert, Image, Linking, Pressable,
+  ScrollView, StyleSheet, Text, View,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Play } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import CustomButton from '../../components/CustomButton';
 import { useTheme } from '../../context/ThemeContext';
 import { movies } from '../../data/movies';
+import { fetchMovieDetails, getMoviePoster } from '../../services/tmdb';
 
 export default function MovieDetails() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams(); // dynamic segment from /movie/[id]
+  const { id } = useLocalSearchParams();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const movie = movies.find((m) => m.id === id);
+  const movieId = Array.isArray(id) ? id[0] : id;
+  const isTMDB = movieId?.startsWith('tmdb-');
+  const localMovie = !isTMDB ? movies.find((m) => m.id === movieId) : null;
 
-  if (!movie) {
+  const [tmdbMovie, setTmdbMovie] = useState(null);
+  const [loading, setLoading] = useState(isTMDB);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isTMDB) return;
+
+    let active = true;
+
+    fetchMovieDetails(movieId.replace('tmdb-', ''))
+      .then((data) => {
+        if (active) setTmdbMovie(data);
+      })
+      .catch((err) => {
+        console.error('Movie details error:', err);
+        if (active) setError('Unable to load movie details. Please try again.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [movieId, isTMDB]);
+
+  const movie = useMemo(() => {
+    if (!isTMDB) return localMovie;
+    if (!tmdbMovie) return null;
+
+    return {
+      id: movieId,
+      title: tmdbMovie.title,
+      image: getMoviePoster(tmdbMovie.poster_path)
+        ? { uri: getMoviePoster(tmdbMovie.poster_path) }
+        : null,
+      genres: tmdbMovie.genres?.map((g) => g.name) || [],
+      duration: tmdbMovie.runtime ? `${tmdbMovie.runtime} min` : 'N/A',
+      releaseDate: tmdbMovie.release_date || 'TBA',
+      synopsis: tmdbMovie.overview || 'No synopsis available.',
+      director: tmdbMovie.credits?.crew?.find(
+        (person) => person.job === 'Director'
+      )?.name || 'Not available',
+      cast: tmdbMovie.credits?.cast?.slice(0, 8).map(
+        (person) => person.name
+      ) || [],
+      trailerUrl: tmdbMovie.videos?.results?.find(
+        (video) => video.site === 'YouTube' &&
+          video.type === 'Trailer' &&
+          video.official
+      )?.key
+        ? `https://www.youtube.com/watch?v=${tmdbMovie.videos.results.find(
+            (video) => video.site === 'YouTube' &&
+              video.type === 'Trailer' &&
+              video.official
+          ).key}`
+        : null,
+    };
+  }, [isTMDB, localMovie, tmdbMovie, movieId]);
+
+  if (loading) {
     return (
       <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Movie not found.</Text>
-        <CustomButton title="BACK" onPress={() => router.back()} />
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={styles.notFoundText}>Loading movie details...</Text>
       </View>
     );
   }
 
-  const genres = movie.genre.split('/').map((g) => g.trim());
+  if (!movie) {
+    return (
+      <View style={styles.notFound}>
+        <Text style={styles.notFoundText}>
+          {error || 'Movie not found.'}
+        </Text>
+        <CustomButton title="BACK" onPress={() => router.back()} />
+        {error ? (
+          <CustomButton
+            title="RETRY"
+            variant="outline"
+            onPress={() => {
+              setError('');
+              setLoading(true);
+              fetchMovieDetails(movieId.replace('tmdb-', ''))
+                .then(setTmdbMovie)
+                .catch(() => setError('Unable to load movie details.'))
+                .finally(() => setLoading(false));
+            }}
+          />
+        ) : null}
+      </View>
+    );
+  }
+
+  const genres = isTMDB
+    ? movie.genres
+    : movie.genre.split('/').map((g) => g.trim());
+
+  const posterSource = isTMDB ? movie.image : movie.image;
 
   const openTrailer = async () => {
+    if (!movie.trailerUrl) {
+      Alert.alert('Trailer', 'No official trailer is available.');
+      return;
+    }
+
     try {
       await Linking.openURL(movie.trailerUrl);
     } catch {
@@ -38,7 +139,13 @@ export default function MovieDetails() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Image source={movie.image} style={styles.poster} resizeMode="cover" />
+        {posterSource ? (
+          <Image source={posterSource} style={styles.poster} resizeMode="cover" />
+        ) : (
+          <View style={styles.posterPlaceholder}>
+            <Text style={styles.placeholderText}>No Poster Available</Text>
+          </View>
+        )}
 
         <View style={styles.body}>
           <Text style={styles.title}>{movie.title}</Text>
@@ -54,16 +161,18 @@ export default function MovieDetails() {
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>DURATION</Text>
-              <Text style={styles.infoValue}>{movie.duration}</Text>
+              <Text style={styles.infoValue}>
+                {isTMDB ? movie.duration : movie.duration}
+              </Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>RELEASED</Text>
-              <Text style={styles.infoValue}>{movie.releaseDate}</Text>
+              <Text style={styles.infoValue}>{movie.releaseDate || 'TBA'}</Text>
             </View>
           </View>
 
           <Text style={styles.sectionTitle}>SYNOPSIS</Text>
-          <Text style={styles.paragraph}>{movie.synopsis}</Text>
+          <Text style={styles.paragraph}>{isTMDB ? movie.synopsis : movie.synopsis}</Text>
 
           <Text style={styles.sectionTitle}>DIRECTOR</Text>
           <Text style={styles.paragraph}>{movie.director}</Text>
@@ -77,41 +186,71 @@ export default function MovieDetails() {
             ))}
           </View>
 
-          <CustomButton title="WATCH TRAILER" variant="outline" onPress={openTrailer} />
-          <CustomButton title="BOOK TICKETS" onPress={() => router.push(`/showtimes/${movie.id}`)} />
+          <CustomButton
+            title="WATCH TRAILER"
+            variant="outline"
+            onPress={openTrailer}
+          />
+          <CustomButton
+            title="BOOK TICKETS"
+            onPress={() => router.push(`/showtimes/${movie.id}`)}
+          />
         </View>
       </ScrollView>
 
-      <Pressable style={[styles.backButton, { top: insets.top + 10 }]} onPress={() => router.back()}>
+      <Pressable
+        style={[styles.backButton, { top: insets.top + 10 }]}
+        onPress={() => router.back()}
+      >
         <ArrowLeft color="#FFFFFF" size={22} />
       </Pressable>
     </View>
   );
 }
 
-const makeStyles = (c) =>
-  StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    content: { paddingBottom: 40 },
-    poster: { width: '100%', height: 400 },
-    backButton: {
-      position: 'absolute', left: 16, width: 40, height: 40, borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center',
-    },
-    body: { padding: 20 },
-    title: { color: c.text, fontSize: 26, fontWeight: '900' },
-    genreRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
-    genreChip: { backgroundColor: c.accentSoft, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
-    genreChipText: { color: c.accent, fontSize: 12, fontWeight: 'bold' },
-    infoCard: { flexDirection: 'row', backgroundColor: c.card, borderRadius: 8, padding: 16, marginTop: 20 },
-    infoItem: { flex: 1 },
-    infoLabel: { color: c.textDim, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5 },
-    infoValue: { color: c.text, fontSize: 15, fontWeight: 'bold', marginTop: 6 },
-    sectionTitle: { color: c.accent, fontSize: 14, fontWeight: '900', letterSpacing: 2, marginTop: 26, marginBottom: 10 },
-    paragraph: { color: c.textMuted, fontSize: 14, lineHeight: 22 },
-    castRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    castChip: { backgroundColor: c.card, borderWidth: 1, borderColor: c.border, borderRadius: 6, paddingVertical: 8, paddingHorizontal: 12 },
-    castText: { color: c.text, fontSize: 13 },
-    notFound: { flex: 1, backgroundColor: c.bg, justifyContent: 'center', padding: 30 },
-    notFoundText: { color: c.text, fontSize: 18, textAlign: 'center' },
-  });
+const makeStyles = (c) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
+  content: { paddingBottom: 40 },
+  poster: { width: '100%', height: 400 },
+  posterPlaceholder: {
+    width: '100%', height: 400, backgroundColor: c.card,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  placeholderText: { color: c.textMuted },
+  backButton: {
+    position: 'absolute', left: 16, width: 40, height: 40,
+    borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  body: { padding: 20 },
+  title: { color: c.text, fontSize: 26, fontWeight: '900' },
+  genreRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  genreChip: {
+    backgroundColor: c.accentSoft, borderRadius: 20,
+    paddingVertical: 6, paddingHorizontal: 12,
+  },
+  genreChipText: { color: c.accent, fontSize: 12, fontWeight: 'bold' },
+  infoCard: {
+    flexDirection: 'row', backgroundColor: c.card,
+    borderRadius: 8, padding: 16, marginTop: 20,
+  },
+  infoItem: { flex: 1 },
+  infoLabel: { color: c.textDim, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5 },
+  infoValue: { color: c.text, fontSize: 15, fontWeight: 'bold', marginTop: 6 },
+  sectionTitle: {
+    color: c.accent, fontSize: 14, fontWeight: '900',
+    letterSpacing: 2, marginTop: 26, marginBottom: 10,
+  },
+  paragraph: { color: c.textMuted, fontSize: 14, lineHeight: 22 },
+  castRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  castChip: {
+    backgroundColor: c.card, borderWidth: 1, borderColor: c.border,
+    borderRadius: 6, paddingVertical: 8, paddingHorizontal: 12,
+  },
+  castText: { color: c.text, fontSize: 13 },
+  notFound: {
+    flex: 1, backgroundColor: c.bg, justifyContent: 'center',
+    alignItems: 'center', padding: 30, gap: 15,
+  },
+  notFoundText: { color: c.text, fontSize: 16, textAlign: 'center' },
+});

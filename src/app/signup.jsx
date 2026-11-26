@@ -1,5 +1,7 @@
+
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import AnimatedBackground from '../components/AnimatedBackground';
 import CustomButton from '../components/CustomButton';
@@ -19,20 +21,30 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSignup = () => {
-    if (name.trim() === '' || email.trim() === '' || password === '') {
+    if (
+      name.trim() === '' ||
+      email.trim() === '' ||
+      password === '' ||
+      confirmPassword === ''
+    ) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
+
     if (!isValidEmail(email.trim())) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
+
     if (password.length < 8) {
       Alert.alert('Weak Password', 'Password must be at least 8 characters.');
       return;
     }
+
     if (password !== confirmPassword) {
       Alert.alert('Password Mismatch', 'Password and Confirm Password do not match.');
       return;
@@ -43,6 +55,21 @@ export default function Signup() {
     router.push('/otp');
   };
 
+  const passwordToggle = (visible, setVisible, label) => (
+    <Pressable
+      onPress={() => setVisible((previous) => !previous)}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={visible ? `Hide ${label}` : `Show ${label}`}
+    >
+      {visible ? (
+        <EyeOff size={20} color={colors.textMuted} />
+      ) : (
+        <Eye size={20} color={colors.textMuted} />
+      )}
+    </Pressable>
+  );
+
   return (
     <View style={styles.container}>
       <AnimatedBackground />
@@ -50,10 +77,47 @@ export default function Signup() {
       <View style={styles.content}>
         <Text style={styles.title}>SIGN UP</Text>
 
-        <InputField label="Name" placeholder="Enter your name" value={name} onChangeText={setName} autoCapitalize="words" />
-        <InputField label="Email" placeholder="Enter your email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <InputField label="Password" placeholder="Enter your password" value={password} onChangeText={setPassword} secureTextEntry />
-        <InputField label="Confirm Password" placeholder="Confirm your password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+        <InputField
+          label="Name"
+          placeholder="Enter your name"
+          value={name}
+          onChangeText={setName}
+          autoCapitalize="words"
+        />
+
+        <InputField
+          label="Email"
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+        />
+
+        <InputField
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          rightAccessory={passwordToggle(
+            showPassword,
+            setShowPassword,
+            'password'
+          )}
+        />
+
+        <InputField
+          label="Confirm Password"
+          placeholder="Confirm your password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showConfirmPassword}
+          rightAccessory={passwordToggle(
+            showConfirmPassword,
+            setShowConfirmPassword,
+            'confirm password'
+          )}
+        />
 
         <CustomButton title="SIGN UP" onPress={handleSignup} />
 
@@ -70,10 +134,27 @@ export default function Signup() {
 
 const makeStyles = (c) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg, justifyContent: 'center', padding: 25, overflow: 'hidden' },
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+      justifyContent: 'center',
+      padding: 25,
+      overflow: 'hidden',
+    },
     content: { zIndex: 1 },
-    title: { fontSize: 36, fontWeight: '900', textAlign: 'center', color: c.accent, marginBottom: 30, letterSpacing: 3 },
-    bottom: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
+    title: {
+      fontSize: 36,
+      fontWeight: '900',
+      textAlign: 'center',
+      color: c.accent,
+      marginBottom: 30,
+      letterSpacing: 3,
+    },
+    bottom: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 25,
+    },
     link: { color: c.accent, fontWeight: 'bold' },
     text: { color: c.text },
   });
