@@ -13,12 +13,35 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { movies } from '../data/movies';
 import { formatDate, getStatus } from '../app/utils/dates';
 import { fetchMovieDetails } from '../services/tmdb';
 
-const getMovie = (id) => movies.find((m) => m.id === id);
-const isTMDBId = (id) => typeof id === 'string' && id.startsWith('tmdb-');
+// Titles retained only for historical bookings made with the old local IDs.
+const LEGACY_MOVIE_TITLES = {
+  '1': 'Spider-Man: Brand New Day',
+  '2': 'Resident Evil',
+  '3': 'Toy Story 5',
+  '4': 'The End of Oak Street',
+  '5': 'Forgotten Island',
+  '6': 'Backrooms',
+};
+
+const isTMDBId = (id) =>
+  typeof id === 'string' && id.startsWith('tmdb-');
+
+// Format membership date using the actual account creation date.
+const formatMemberSince = (value) => {
+  if (!value) return 'UNKNOWN';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return 'UNKNOWN';
+
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  }).toUpperCase();
+};
 
 export default function Profile() {
   const router = useRouter();
@@ -77,10 +100,12 @@ export default function Profile() {
     };
   }, [tmdbIds]);
 
+  // Resolve current TMDB movies and previously booked local movies.
   const getMovieTitle = (id) =>
-    getMovie(id)?.title ||
     tmdbTitles[id] ||
-    (isTMDBId(id) ? 'Loading movie...' : 'Unknown movie');
+    (isTMDBId(id)
+      ? 'Loading movie...'
+      : LEGACY_MOVIE_TITLES[id] || 'Unknown movie');
 
   if (!user) return null;
 
@@ -231,7 +256,7 @@ export default function Profile() {
 
           <View style={styles.memberBadge}>
             <Text style={styles.memberText}>
-              CINEMA MEMBER SINCE {user.memberSince}
+              CINEMA MEMBER SINCE {formatMemberSince(user.memberSince)}
             </Text>
           </View>
         </View>

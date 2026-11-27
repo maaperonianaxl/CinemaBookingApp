@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../app/lib/supabase';
 
@@ -5,27 +6,50 @@ const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
 // ---- database rows -> app objects ----
-const toUser = (r) => ({ id: r.id, name: r.name, email: r.email, avatar: r.avatar, memberSince: r.member_since });
-const toBooking = (r) => ({ id: r.id, movieId: r.movie_id, date: r.show_date, time: r.show_time, seats: r.seats, status: r.status });
-const toTicket = (r) => ({ id: r.id, bookingId: r.booking_id, movieId: r.movie_id, seat: r.seat, code: r.code });
+const toUser = (r, authCreatedAt = null) => ({
+  id: r.id,
+  name: r.name,
+  email: r.email,
+  avatar: r.avatar,
+  memberSince: authCreatedAt || r.created_at || r.member_since,
+});
+
+const toBooking = (r) => ({
+  id: r.id,
+  movieId: r.movie_id,
+  date: r.show_date,
+  time: r.show_time,
+  seats: r.seats,
+  status: r.status,
+});
+
+const toTicket = (r) => ({
+  id: r.id,
+  bookingId: r.booking_id,
+  movieId: r.movie_id,
+  seat: r.seat,
+  code: r.code,
+});
 
 // ---- readable error messages ----
 const friendly = (error) => {
   const message = error?.message ?? '';
+
   if (message.includes('Invalid login credentials')) return 'Incorrect email or password.';
   if (message.includes('already registered')) return 'An account with this email already exists.';
   if (message.includes('SEAT_TAKEN')) return 'One of those seats was just taken. Please choose other seats.';
   if (message.includes('BOOKING_NOT_FOUND')) return 'This booking can no longer be cancelled.';
   if (message.includes('Network request failed')) return 'No internet connection. Please try again.';
+
   return message || 'Something went wrong. Please try again.';
 };
 
 export function AuthProvider({ children }) {
-  const [loading, setLoading] = useState(true); // true while the saved session is restored
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [tickets, setTickets] = useState([]);
-  const [pendingUser, setPendingUser] = useState(null); // signup waiting for the OTP step
+  const [pendingUser, setPendingUser] = useState(null);
 
   const clearData = () => {
     setUser(null);
@@ -33,34 +57,48 @@ export function AuthProvider({ children }) {
     setTickets([]);
   };
 
-  // Loads the profile, bookings and tickets of a signed-in user (RLS limits rows to their own)
+  // Loads the profile, bookings and tickets of a signed-in user
   const loadUserData = async (authId) => {
-    const [profile, b, t] = await Promise.all([
+    const [
+      profile,
+      bookingsResult,
+      ticketsResult,
+      authResult,
+    ] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', authId).single(),
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
+      supabase.auth.getUser(),
     ]);
-    if (profile.error) throw profile.error;
-    if (b.error) throw b.error;
-    if (t.error) throw t.error;
 
-    setBookings(b.data.map(toBooking));
-    setTickets(t.data.map(toTicket));
-    setUser(toUser(profile.data)); // set last, so screens open with their data ready
+    if (profile.error) throw profile.error;
+    if (bookingsResult.error) throw bookingsResult.error;
+    if (ticketsResult.error) throw ticketsResult.error;
+    if (authResult.error) throw authResult.error;
+
+    const authCreatedAt = authResult.data.user?.created_at || null;
+
+    setBookings(bookingsResult.data.map(toBooking));
+    setTickets(ticketsResult.data.map(toTicket));
+    setUser(toUser(profile.data, authCreatedAt));
   };
 
-  // Restore the saved session when the app starts
+  // Restore saved session when app starts
   useEffect(() => {
     let active = true;
 
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        if (data.session) await loadUserData(data.session.user.id);
+
+        if (data.session) {
+          await loadUserData(data.session.user.id);
+        }
       } catch (e) {
         await supabase.auth.signOut().catch(() => {});
         clearData();
       }
+
       if (active) setLoading(false);
     })();
 
@@ -76,8 +114,13 @@ export function AuthProvider({ children }) {
 
   // ---------- Authentication ----------
   const login = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
     if (error) return { ok: false, error: friendly(error) };
+
     try {
       await loadUserData(data.user.id);
       return { ok: true };
@@ -92,23 +135,36 @@ export function AuthProvider({ children }) {
     clearData();
   };
 
-  // Step 1: keep the form data until the OTP step is done
+  // Step 1: Keep form data until OTP step is done
   const startSignup = ({ name, email, password }) => {
-    setPendingUser({ name: name.trim(), email: email.trim(), password });
+    setPendingUser({
+      name: name.trim(),
+      email: email.trim(),
+      password,
+    });
   };
 
-  // Step 2: create the account (a database trigger creates the profile)
+  // Step 2: Create account
   const completeSignup = async () => {
-    if (!pendingUser) return { ok: false, error: 'Please sign up again.' };
+    if (!pendingUser) {
+      return { ok: false, error: 'Please sign up again.' };
+    }
 
     const { data, error } = await supabase.auth.signUp({
       email: pendingUser.email,
       password: pendingUser.password,
-      options: { data: { name: pendingUser.name } },
+      options: {
+        data: { name: pendingUser.name },
+      },
     });
+
     if (error) return { ok: false, error: friendly(error) };
+
     if (!data.session) {
-      return { ok: false, error: 'Email confirmation is still ON in Supabase. Turn it off (see README) and try again.' };
+      return {
+        ok: false,
+        error: 'Email confirmation is still ON in Supabase. Turn it off (see README) and try again.',
+      };
     }
 
     try {
@@ -121,25 +177,43 @@ export function AuthProvider({ children }) {
   };
 
   // ---------- Profile ----------
-  // changes: { name } and/or { avatar }
   const updateProfile = async (changes) => {
-    const { data, error } = await supabase.from('profiles').update(changes).eq('id', user.id).select().single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(changes)
+      .eq('id', user.id)
+      .select()
+      .single();
+
     if (error) return { ok: false, error: friendly(error) };
-    setUser(toUser(data));
+
+    const { data: authData } = await supabase.auth.getUser();
+
+    setUser(toUser(data, authData.user?.created_at || null));
+
     return { ok: true };
   };
 
   const changePassword = async (currentPassword, newPassword) => {
-    // Check the current password first
-    const check = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
-    if (check.error) return { ok: false, error: 'Your current password is incorrect.' };
+    const check = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (check.error) {
+      return { ok: false, error: 'Your current password is incorrect.' };
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
     if (error) return { ok: false, error: friendly(error) };
+
     return { ok: true };
   };
 
-  // Reload everything (pull to refresh) - useful when another device made changes
+  // Reload everything
   const refresh = async () => {
     try {
       await loadUserData(user.id);
@@ -151,21 +225,47 @@ export function AuthProvider({ children }) {
 
   // ---------- Seats and bookings ----------
   const getTakenSeats = async (movieId, date, time) => {
-    const { data, error } = await supabase.rpc('taken_seats', { p_movie: movieId, p_date: date, p_time: time });
+    const { data, error } = await supabase.rpc('taken_seats', {
+      p_movie: movieId,
+      p_date: date,
+      p_time: time,
+    });
+
     if (error) return { ok: false, error: friendly(error) };
-    return { ok: true, seats: data.map((row) => row.seat) };
+
+    return {
+      ok: true,
+      seats: data.map((row) => row.seat),
+    };
   };
 
   const bookSeats = async ({ movieId, date, time, seats }) => {
-    const { error } = await supabase.rpc('book_seats', { p_movie: movieId, p_date: date, p_time: time, p_seats: seats });
-    if (error) return { ok: false, error: friendly(error), seatTaken: (error.message ?? '').includes('SEAT_TAKEN') };
+    const { error } = await supabase.rpc('book_seats', {
+      p_movie: movieId,
+      p_date: date,
+      p_time: time,
+      p_seats: seats,
+    });
+
+    if (error) {
+      return {
+        ok: false,
+        error: friendly(error),
+        seatTaken: (error.message ?? '').includes('SEAT_TAKEN'),
+      };
+    }
+
     await refresh();
     return { ok: true };
   };
 
   const cancelBooking = async (bookingId) => {
-    const { error } = await supabase.rpc('cancel_booking', { p_booking: bookingId });
+    const { error } = await supabase.rpc('cancel_booking', {
+      p_booking: bookingId,
+    });
+
     if (error) return { ok: false, error: friendly(error) };
+
     await refresh();
     return { ok: true };
   };

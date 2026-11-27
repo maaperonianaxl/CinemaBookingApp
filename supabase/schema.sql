@@ -2,7 +2,7 @@
 -- Movie Masters - Supabase schema
 -- Run this ONCE in: Supabase Dashboard > SQL Editor > New query > Run
 -- Safe to re-run (it drops and recreates policies, triggers and functions).
--- Seat grid used by the app: rows A-H, seats 1-8 (see src/data/showtimes.js)
+-- Seat grid used by the app: rows A-J, seats 1-15 (see src/data/showtimes.js)
 -- =====================================================================
 
 -- ---------- Tables ----------
@@ -95,51 +95,84 @@ as $$
   where t.movie_id = p_movie and t.show_date = p_date and t.show_time = p_time;
 $$;
 
+
 -- ---------- Book seats (all or nothing) ----------
-create or replace function public.book_seats(
-  p_movie text, p_date text, p_time text, p_seats text[]
+CREATE OR REPLACE FUNCTION public.book_seats(
+  p_movie text,
+  p_date text,
+  p_time text,
+  p_seats text[]
 )
-returns uuid
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
   v_booking uuid;
-  v_seat    text;
-begin
-  if auth.uid() is null then
-    raise exception 'NOT_AUTHENTICATED';
-  end if;
+  v_seat text;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'NOT_AUTHENTICATED';
+  END IF;
 
-  if p_seats is null or cardinality(p_seats) < 1 or cardinality(p_seats) > 6 then
-    raise exception 'INVALID_SEATS';
-  end if;
+  -- Allow 1 to 150 seats per booking.
+  IF p_seats IS NULL
+    OR cardinality(p_seats) < 1
+    OR cardinality(p_seats) > 150
+  THEN
+    RAISE EXCEPTION 'INVALID_SEATS';
+  END IF;
 
-  foreach v_seat in array p_seats loop
-    if v_seat !~ '^[A-H][1-8]$' then
-      raise exception 'INVALID_SEATS';
-    end if;
-  end loop;
+  -- Prevent duplicate seats in one booking.
+  IF cardinality(p_seats) <> (
+    SELECT count(DISTINCT requested_seat)
+    FROM unnest(p_seats) AS requested_seats(requested_seat)
+  ) THEN
+    RAISE EXCEPTION 'INVALID_SEATS';
+  END IF;
 
-  insert into public.bookings (user_id, movie_id, show_date, show_time, seats)
-  values (auth.uid(), p_movie, p_date, p_time, p_seats)
-  returning id into v_booking;
+  -- Valid seats: A1 through J15.
+  FOREACH v_seat IN ARRAY p_seats LOOP
+    IF v_seat IS NULL OR v_seat !~ '^[A-J](1[0-5]|[1-9])$' THEN
+      RAISE EXCEPTION 'INVALID_SEATS';
+    END IF;
+  END LOOP;
 
-  foreach v_seat in array p_seats loop
-    insert into public.tickets (booking_id, user_id, movie_id, show_date, show_time, seat, code)
-    values (
-      v_booking, auth.uid(), p_movie, p_date, p_time, v_seat,
+  -- Create booking.
+  INSERT INTO public.bookings (
+    user_id, movie_id, show_date, show_time, seats
+  )
+  VALUES (
+    auth.uid(), p_movie, p_date, p_time, p_seats
+  )
+  RETURNING id INTO v_booking;
+
+  -- Generate one ticket for every selected seat.
+  FOREACH v_seat IN ARRAY p_seats LOOP
+    INSERT INTO public.tickets (
+      booking_id, user_id, movie_id,
+      show_date, show_time, seat, code
+    )
+    VALUES (
+      v_booking,
+      auth.uid(),
+      p_movie,
+      p_date,
+      p_time,
+      v_seat,
       'MM' || upper(substr(replace(v_booking::text, '-', ''), 1, 5)) || v_seat
     );
-  end loop;
+  END LOOP;
 
-  return v_booking;
-exception
-  when unique_violation then
-    raise exception 'SEAT_TAKEN';
-end;
+  RETURN v_booking;
+
+EXCEPTION
+  WHEN unique_violation THEN
+    RAISE EXCEPTION 'SEAT_TAKEN';
+END;
 $$;
+
 
 -- ---------- Cancel a booking and free its seats ----------
 create or replace function public.cancel_booking(p_booking uuid)

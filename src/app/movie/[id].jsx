@@ -9,7 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import CustomButton from '../../components/CustomButton';
 import { useTheme } from '../../context/ThemeContext';
-import { movies } from '../../data/movies';
 import { fetchMovieDetails, getMoviePoster } from '../../services/tmdb';
 
 export default function MovieDetails() {
@@ -20,25 +19,38 @@ export default function MovieDetails() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const movieId = Array.isArray(id) ? id[0] : id;
-  const isTMDB = movieId?.startsWith('tmdb-');
-  const localMovie = !isTMDB ? movies.find((m) => m.id === movieId) : null;
+  const tmdbId = movieId?.startsWith('tmdb-')
+    ? movieId.replace('tmdb-', '')
+    : null;
 
   const [tmdbMovie, setTmdbMovie] = useState(null);
-  const [loading, setLoading] = useState(isTMDB);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isTMDB) return;
-
     let active = true;
 
-    fetchMovieDetails(movieId.replace('tmdb-', ''))
+    if (!tmdbId) {
+      setError('Invalid TMDB movie ID.');
+      setLoading(false);
+
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoading(true);
+    setError('');
+
+    fetchMovieDetails(tmdbId)
       .then((data) => {
         if (active) setTmdbMovie(data);
       })
       .catch((err) => {
         console.error('Movie details error:', err);
-        if (active) setError('Unable to load movie details. Please try again.');
+        if (active) {
+          setError('Unable to load movie details. Please try again.');
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -47,11 +59,17 @@ export default function MovieDetails() {
     return () => {
       active = false;
     };
-  }, [movieId, isTMDB]);
+  }, [tmdbId]);
 
   const movie = useMemo(() => {
-    if (!isTMDB) return localMovie;
     if (!tmdbMovie) return null;
+
+    const officialTrailer = tmdbMovie.videos?.results?.find(
+      (video) =>
+        video.site === 'YouTube' &&
+        video.type === 'Trailer' &&
+        video.official
+    );
 
     return {
       id: movieId,
@@ -60,7 +78,9 @@ export default function MovieDetails() {
         ? { uri: getMoviePoster(tmdbMovie.poster_path) }
         : null,
       genres: tmdbMovie.genres?.map((g) => g.name) || [],
-      duration: tmdbMovie.runtime ? `${tmdbMovie.runtime} min` : 'N/A',
+      duration: tmdbMovie.runtime
+        ? `${tmdbMovie.runtime} min`
+        : 'N/A',
       releaseDate: tmdbMovie.release_date || 'TBA',
       synopsis: tmdbMovie.overview || 'No synopsis available.',
       director: tmdbMovie.credits?.crew?.find(
@@ -69,19 +89,26 @@ export default function MovieDetails() {
       cast: tmdbMovie.credits?.cast?.slice(0, 8).map(
         (person) => person.name
       ) || [],
-      trailerUrl: tmdbMovie.videos?.results?.find(
-        (video) => video.site === 'YouTube' &&
-          video.type === 'Trailer' &&
-          video.official
-      )?.key
-        ? `https://www.youtube.com/watch?v=${tmdbMovie.videos.results.find(
-            (video) => video.site === 'YouTube' &&
-              video.type === 'Trailer' &&
-              video.official
-          ).key}`
+      trailerUrl: officialTrailer?.key
+        ? `https://www.youtube.com/watch?v=${officialTrailer.key}`
         : null,
     };
-  }, [isTMDB, localMovie, tmdbMovie, movieId]);
+  }, [tmdbMovie, movieId]);
+
+  const retryLoad = () => {
+    if (!tmdbId) return;
+
+    setError('');
+    setLoading(true);
+
+    fetchMovieDetails(tmdbId)
+      .then(setTmdbMovie)
+      .catch((err) => {
+        console.error('Movie details retry error:', err);
+        setError('Unable to load movie details. Please try again.');
+      })
+      .finally(() => setLoading(false));
+  };
 
   if (loading) {
     return (
@@ -98,30 +125,22 @@ export default function MovieDetails() {
         <Text style={styles.notFoundText}>
           {error || 'Movie not found.'}
         </Text>
-        <CustomButton title="BACK" onPress={() => router.back()} />
+
+        <CustomButton
+          title="BACK"
+          onPress={() => router.back()}
+        />
+
         {error ? (
           <CustomButton
             title="RETRY"
             variant="outline"
-            onPress={() => {
-              setError('');
-              setLoading(true);
-              fetchMovieDetails(movieId.replace('tmdb-', ''))
-                .then(setTmdbMovie)
-                .catch(() => setError('Unable to load movie details.'))
-                .finally(() => setLoading(false));
-            }}
+            onPress={retryLoad}
           />
         ) : null}
       </View>
     );
   }
-
-  const genres = isTMDB
-    ? movie.genres
-    : movie.genre.split('/').map((g) => g.trim());
-
-  const posterSource = isTMDB ? movie.image : movie.image;
 
   const openTrailer = async () => {
     if (!movie.trailerUrl) {
@@ -139,8 +158,12 @@ export default function MovieDetails() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {posterSource ? (
-          <Image source={posterSource} style={styles.poster} resizeMode="cover" />
+        {movie.image ? (
+          <Image
+            source={movie.image}
+            style={styles.poster}
+            resizeMode="cover"
+          />
         ) : (
           <View style={styles.posterPlaceholder}>
             <Text style={styles.placeholderText}>No Poster Available</Text>
@@ -151,7 +174,7 @@ export default function MovieDetails() {
           <Text style={styles.title}>{movie.title}</Text>
 
           <View style={styles.genreRow}>
-            {genres.map((genre) => (
+            {movie.genres.map((genre) => (
               <View key={genre} style={styles.genreChip}>
                 <Text style={styles.genreChipText}>{genre}</Text>
               </View>
@@ -162,17 +185,20 @@ export default function MovieDetails() {
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>DURATION</Text>
               <Text style={styles.infoValue}>
-                {isTMDB ? movie.duration : movie.duration}
+                {movie.duration}
               </Text>
             </View>
+
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>RELEASED</Text>
-              <Text style={styles.infoValue}>{movie.releaseDate || 'TBA'}</Text>
+              <Text style={styles.infoValue}>
+                {movie.releaseDate}
+              </Text>
             </View>
           </View>
 
           <Text style={styles.sectionTitle}>SYNOPSIS</Text>
-          <Text style={styles.paragraph}>{isTMDB ? movie.synopsis : movie.synopsis}</Text>
+          <Text style={styles.paragraph}>{movie.synopsis}</Text>
 
           <Text style={styles.sectionTitle}>DIRECTOR</Text>
           <Text style={styles.paragraph}>{movie.director}</Text>
@@ -191,6 +217,7 @@ export default function MovieDetails() {
             variant="outline"
             onPress={openTrailer}
           />
+
           <CustomButton
             title="BOOK TICKETS"
             onPress={() => router.push(`/showtimes/${movie.id}`)}
